@@ -95,16 +95,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4.  Push to the Branch (`git push origin feature/AmazingFeature`)
 5.  Open a Pull Request
 
-<<<<<<< HEAD
 ## ⚠️ Disclaimer
 
 This project is an unofficial fan creation and is not affiliated with, endorsed, sponsored, or specifically approved by any official game studio. All trademarks are property of their respective owners.
-=======
 
-## ⚠️ Disclaimer
-
-This project is an unofficial fan creation and is not affiliated with, endorsed, sponsored, or specifically approved by Warmane or Blizzard Entertainment. World of Warcraft is a trademark of Blizzard Entertainment.
->>>>>>> b632c8f99d9ea8097d83f459e6ad7d2ded98e378
 
 ## 📄 License
 
