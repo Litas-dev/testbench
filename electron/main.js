@@ -15,18 +15,6 @@ const net = require('net');
 // Allow autoplay without user interaction
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
-// We'll load WebTorrent dynamically
-let WebTorrent;
-(async () => {
-    try {
-        const module = await import('webtorrent');
-        WebTorrent = module.default || module;
-    } catch (e) {
-        console.error("Failed to load webtorrent:", e);
-    }
-})();
-
-let client = null;
 let mainWindow = null;
 let downloadInterval = null;
 
@@ -806,12 +794,12 @@ ipcMain.handle('fetch-warperia-addons', async (event, expansion) => {
             
             // Extract title
             const titleMatch = cardHtml.match(/<div class="addon-title[^"]*">([\s\S]*?)<\/div>/);
-            let title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : 'Unknown Addon';
+            let title = titleMatch ? stripHtml(titleMatch[1]) : 'Unknown Addon';
             title = title.replace(/&#8211;/g, '-').replace(/&amp;/g, '&');
             
             // Extract description
             const descMatch = cardHtml.match(/<div class="[^"]*addon-short[^"]*">([\s\S]*?)<\/div>/);
-            const description = descMatch ? descMatch[1].trim() : '';
+            const description = descMatch ? stripHtml(descMatch[1]) : '';
             
             // Extract image
             const imgMatch = cardHtml.match(/data-src="([^"]+)"/) || cardHtml.match(/src="([^"]+)"/);
