@@ -113,45 +113,7 @@ export const useDownloader = ({
     }, [activeGameId, enableNotifications, enableSoundEffects, savePath, showModal, closeModal]);
 
     const handleDownload = async () => {
-        if (downloadState.isDownloading) {
-            if (showModal) showModal('Download in Progress', 'Please wait for the current download to finish before starting another.', <button className="modal-btn-primary" onClick={closeModal}>OK</button>);
-            return;
-        }
-        
-        try {
-            let installPath = defaultDownloadPath;
-            if (!installPath) {
-                installPath = await ipcRenderer.invoke('select-directory');
-            }
-            if (!installPath) return;
-
-            setDownloadState(prev => ({
-                ...prev,
-                isDownloading: true,
-                gameId: activeGameId
-            }));
-            
-            downloadingGameIdRef.current = activeGameId;
-
-            const activeGame = games.find(g => g.id === activeGameId);
-            const downloadSource = activeGame.downloads ? activeGame.downloads[selectedDownloadIndex].url : activeGame.magnet;
-
-            const result = await ipcRenderer.invoke('start-download', { 
-                magnetURI: downloadSource, 
-                downloadPath: installPath 
-            });
-
-            if (!result.success && result.message) {
-                setDownloadState(prev => ({ ...prev, isDownloading: false, gameId: null }));
-                downloadingGameIdRef.current = null;
-                if (showModal) showModal('Download Failed', result.message, <button className="modal-btn-primary" onClick={closeModal}>OK</button>);
-            }
-        } catch (error) {
-            setDownloadState(prev => ({ ...prev, isDownloading: false, gameId: null }));
-            downloadingGameIdRef.current = null;
-            console.error("Download error:", error);
-            if (showModal) showModal('Download Error', "Failed to start download: " + error.message, <button className="modal-btn-primary" onClick={closeModal}>OK</button>);
-        }
+        if (showModal) showModal('Download Unavailable', 'Client downloads are no longer supported.', <button className="modal-btn-primary" onClick={closeModal}>OK</button>);
     };
 
     const handleCancelDownload = () => {

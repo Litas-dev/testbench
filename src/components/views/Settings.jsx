@@ -3,6 +3,11 @@ import { Trash2, ChevronDown, FolderOpen, X } from 'lucide-react';
 import styles from './Settings.module.css';
 import { themes } from '../../config/themes';
 
+/**
+ * Settings Component
+ * Manages application preferences including launcher behavior, 
+ * theming, and installation paths.
+ */
 const Settings = ({
   activeGame,
   autoCloseLauncher,

@@ -35,7 +35,7 @@ const GameDetails = ({
 
   useEffect(() => {
     if (currentPath && detectedVersion && activeGame.version) {
-      // Extract the first number found (Major version)
+      /** Extract major version number (e.g. "3.3.5" -> "3") */
       // This handles cases like "Version 3.3" -> "3", "3.3.5a" -> "3", "v1.12" -> "1"
       const getMajor = (v) => {
         const match = v.toString().match(/(\d+)/);
@@ -45,11 +45,11 @@ const GameDetails = ({
       const gameMajor = getMajor(activeGame.version);
       const detectedMajor = getMajor(detectedVersion);
 
-      // Only mark incompatible if we successfully extracted both major versions and they differ
+      // Check compatibility only if both versions were successfully parsed
       if (gameMajor && detectedMajor) {
         setIsVersionCompatible(gameMajor === detectedMajor);
       } else {
-        // If parsing fails, default to compatible to avoid blocking valid but weirdly versioned clients
+        // Default to compatible if version parsing fails to prevent blocking valid clients
         setIsVersionCompatible(true);
       }
     } else {

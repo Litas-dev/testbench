@@ -2,12 +2,8 @@ import React from 'react';
 import styles from './Dashboard.module.css';
 import { games } from '../../config/games';
 
-// We can either pass these as props or import them from config if we export them
-// Since they are in the config file but not exported individually as named exports (except 'games'),
-// we can get them from the games array.
-
 const Dashboard = ({ games, onGameSelect }) => {
-  // Helper to find specific game icons
+  // Helper: Retrieve game icon from configuration
   const getGameIcon = (id) => {
     const game = games.find(g => g.id === id);
     return game ? game.clientIcon : null;

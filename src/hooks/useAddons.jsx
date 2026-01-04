@@ -19,7 +19,7 @@ export const useAddons = ({
     const [installingAddon, setInstallingAddon] = useState(null);
     const [loadingAddons, setLoadingAddons] = useState(false);
     
-    // Filtering & Sorting
+    // State for filter and sort controls
     const [addonSearch, setAddonSearch] = useState('');
     const [addonSort, setAddonSort] = useState('popular');
     const [addonPage, setAddonPage] = useState(1);
@@ -49,7 +49,7 @@ export const useAddons = ({
         }
     }, [activeView, activeAddonTab, activeGameId, gamePaths]);
 
-    // Fetch Warperia Addons dynamically
+    // Effect: Fetch available addons from remote source
     useEffect(() => {
         if (activeView === 'addons') {
             const selectedVersion = activeGame.downloads && activeGame.downloads[selectedDownloadIndex] 
@@ -61,7 +61,7 @@ export const useAddons = ({
                 const wotlkLocal = localAddons.map(a => ({ ...a, gameVersion: '3.3.5' }));
                 
                 try {
-                    // If WotLK, use local cache first for immediate display
+                    // Optimistic update: Show local cache while fetching remote data
                     if (activeGameId === 'wotlk' && allWarperiaAddons.length === 0) {
                         setAllWarperiaAddons(wotlkLocal);
                     }
@@ -90,7 +90,7 @@ export const useAddons = ({
         }
     }, [activeView, activeGameId, selectedDownloadIndex]);
 
-    // Filter addons for browse tab
+    // Effect: Filter and sort browse list
     useEffect(() => {
         if (activeView === 'addons' && activeAddonTab === 'browse') {
             const wotlkLocal = localAddons.map(a => ({ ...a, gameVersion: '3.3.5' }));
@@ -165,6 +165,31 @@ export const useAddons = ({
         }
     };
 
+    const handleDeleteAddon = async (foldersToDelete) => {
+        const path = gamePaths[activeGameId];
+        if (!path) return;
+
+        try {
+            const result = await ipcRenderer.invoke('delete-addon', {
+                gamePath: path,
+                addonNames: foldersToDelete
+            });
+
+            if (result.success) {
+                // Refresh installed list
+                const raw = await ipcRenderer.invoke('get-addons', path);
+                const grouped = groupAddons(raw || []);
+                const display = processAddonsForDisplay(grouped);
+                setAddonsList(display);
+                showModal('Success', 'Addon uninstalled successfully!', <button className="modal-btn-primary" onClick={closeModal}>OK</button>);
+            } else {
+                showModal('Error', `Failed to uninstall addon: ${result.message}`, <button className="modal-btn-primary" onClick={closeModal}>OK</button>);
+            }
+        } catch (error) {
+            showModal('Error', `Error uninstalling addon: ${error.message}`, <button className="modal-btn-primary" onClick={closeModal}>OK</button>);
+        }
+    };
+
     return {
         addonsList,
         setAddonsList,
@@ -181,6 +206,7 @@ export const useAddons = ({
         setAddonPage,
         filteredAddonCount,
         handleInstallWarperiaAddon,
+        handleDeleteAddon,
         itemsPerPage
     };
 };

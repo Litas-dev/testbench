@@ -20,7 +20,7 @@ export const games = [
     icon: classicLogo,
     clientIcon: classicIco,
     cardArt: classicArt,
-    bg: 'https://images.alphacoders.com/109/1097880.jpg', // Classic BG
+    bg: 'https://images.alphacoders.com/109/1097880.jpg', // Background for Classic
   },
   { 
     id: 'tbc', 
@@ -31,7 +31,7 @@ export const games = [
     icon: tbcLogo,
     clientIcon: tbcIco,
     cardArt: tbcArt,
-    bg: 'https://images.alphacoders.com/603/603505.jpg', // TBC BG (Illidan Clean)
+    bg: 'https://images.alphacoders.com/603/603505.jpg', // Background for TBC
   },
   { 
     id: 'wotlk', 
@@ -42,6 +42,6 @@ export const games = [
     icon: wotlkLogo,
     clientIcon: wotlkIco,
     cardArt: wotlkArt,
-    bg: 'https://images.alphacoders.com/694/69466.jpg', // WotLK BG
+    bg: 'https://images.alphacoders.com/694/69466.jpg', // Background for WotLK
   }
 ];

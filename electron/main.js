@@ -46,7 +46,6 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      // webviewTag: true, // Removed as per request to revert changes
     },
   });
 
@@ -76,11 +75,7 @@ function createWindow() {
     }
   });
   ipcMain.on('close-window', () => {
-    if (client) {
-        client.destroy(() => win.close());
-    } else {
-        win.close();
-    }
+    win.close();
   });
 }
 
@@ -98,7 +93,10 @@ app.on('window-all-closed', () => {
 
 // --- Game Logic ---
 
-// Shared helper to process downloaded game (Extract Zip -> Find Exe)
+/** 
+ * Shared helper to process downloaded game assets
+ * Handles archive extraction (ZIP/RAR) and executable discovery 
+ */
 async function processGameDownload(downloadedFile, finalPath, eventSender, options = {}) {
     console.log("Processing download:", downloadedFile);
     let gamePath = downloadedFile;
@@ -115,8 +113,7 @@ async function processGameDownload(downloadedFile, finalPath, eventSender, optio
             archiveType = 'rar';
         }
         
-        // Note: For torrents, we might need to look inside the folder, handled by caller or here if path is dir?
-        // If gamePath is a directory (from torrent), we search inside.
+        // If gamePath is a directory (e.g. from torrent), search inside for archives
         if (!archiveToExtract && fs.existsSync(gamePath) && fs.statSync(gamePath).isDirectory()) {
              try {
                 const files = fs.readdirSync(gamePath);
@@ -459,232 +456,6 @@ ipcMain.handle('update-realmlist', async (event, { gamePath, content }) => {
     } catch (e) {
         console.error("Error updating realmlist:", e);
         return { success: false, message: e.message };
-    }
-});
-
-// --- Torrent Logic ---
-
-ipcMain.handle('start-download', async (event, { magnetURI, downloadPath }) => {
-    try {
-    let downloadSource = magnetURI;
-    if (typeof downloadSource === 'string') {
-        downloadSource = downloadSource.trim();
-    }
-    
-    console.log(`[Start-Download] Received URI: '${downloadSource}'`);
-
-    let isInternalTorrent = false;
-
-    // Map internal torrent keys to file paths
-    if (downloadSource === 'TORRENT:TBC') {
-        const torrentPath = path.join(__dirname, 'torrents', 'tbc-2.4.3.torrent');
-        console.log("Resolving internal torrent:", torrentPath);
-        if (fs.existsSync(torrentPath)) {
-             try {
-                downloadSource = fs.readFileSync(torrentPath);
-                isInternalTorrent = true;
-                console.log("Internal torrent loaded. Buffer size:", downloadSource.length);
-             } catch (e) {
-                console.error("Failed to read torrent file:", e);
-                return { success: false, message: "Failed to read internal torrent file" };
-             }
-        } else {
-             console.error("Torrent file missing at:", torrentPath);
-             return { success: false, message: "Internal torrent file missing" };
-        }
-    } else if (typeof downloadSource === 'string' && downloadSource.startsWith('TORRENT:')) {
-        console.error("Unknown internal torrent key:", downloadSource);
-        return { success: false, message: "Unknown internal torrent identifier" };
-    }
-
-    // Check if it's a Magnet Link or HTTP URL
-    // If it's a buffer (internal torrent), isMagnet/isHttp are false
-    const isMagnet = typeof downloadSource === 'string' && downloadSource.startsWith('magnet:');
-    const isHttp = typeof downloadSource === 'string' && downloadSource.startsWith('http');
-
-    // If not magnet, not http, and not internal torrent buffer, reject it
-    if (!isMagnet && !isHttp && !isInternalTorrent && !Buffer.isBuffer(downloadSource)) {
-        console.error("Invalid download source format");
-        return { success: false, message: "Invalid download source" };
-    }
-
-    const finalPath = downloadPath || path.join(app.getPath('downloads'), 'Warmane');
-    if (!fs.existsSync(finalPath)) fs.mkdirSync(finalPath, { recursive: true });
-
-    // --- HTTP / HTTPS Download Logic ---
-    if (isHttp) {
-        // Ensure http/https are available in this scope (robustness fix)
-        const http = require('http');
-        const https = require('https');
-
-        if (downloadInterval) clearInterval(downloadInterval);
-        
-        const fileUrl = downloadSource;
-        const fileName = path.basename(new URL(fileUrl).pathname) || 'game_client.zip';
-        const destPath = path.join(finalPath, fileName);
-        
-        console.log(`Starting HTTP download: ${fileUrl} -> ${destPath}`);
-
-        return new Promise((resolve) => {
-             const downloadFile = (url) => {
-                 let targetUrl;
-                 try {
-                     targetUrl = new URL(url);
-                 } catch (e) {
-                     // Handle relative redirect
-                     try {
-                         targetUrl = new URL(url, fileUrl);
-                     } catch (e2) {
-                         resolve({ success: false, message: `Invalid URL: ${url}` });
-                         return;
-                     }
-                 }
-                 
-                 const protocol = targetUrl.protocol === 'https:' ? https : http;
-                 
-                 const request = protocol.get(targetUrl.href, {
-                     headers: {
-                         'User-Agent': 'Azeroth-Legacy-Launcher/1.0',
-                         'Connection': 'keep-alive'
-                     }
-                 }, (response) => {
-                     // Handle Redirects
-                     if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-                         console.log(`Following redirect to: ${response.headers.location}`);
-                         downloadFile(response.headers.location);
-                         return;
-                     }
-
-                     if (response.statusCode !== 200) {
-                         resolve({ success: false, message: `Download failed. Status Code: ${response.statusCode}` });
-                         return;
-                     }
-
-                     const totalLength = parseInt(response.headers['content-length'], 10);
-                     const startTime = Date.now();
-                     
-                     // Create write stream only after successful connection
-                     const file = fs.createWriteStream(destPath);
-                     
-                     response.pipe(file);
-
-                     // Progress Loop
-                     downloadInterval = setInterval(() => {
-                         if (!mainWindow) { clearInterval(downloadInterval); return; }
-                         
-                         const downloaded = file.bytesWritten;
-                         const elapsed = (Date.now() - startTime) / 1000; // seconds
-                         const speed = elapsed > 0 ? downloaded / elapsed : 0; // bytes per second
-
-                         mainWindow.webContents.send('download-progress', {
-                             progress: totalLength ? downloaded / totalLength : 0,
-                             speed: speed,
-                             downloaded: downloaded,
-                             total: totalLength || 0,
-                             peers: 1 // HTTP Source
-                         });
-                     }, 1000);
-
-                     file.on('finish', () => {
-                         file.close(async () => {
-                             clearInterval(downloadInterval);
-                             console.log("HTTP Download finished.");
-                             await processGameDownload(destPath, finalPath, mainWindow.webContents);
-                         });
-                     });
-
-                     file.on('error', (err) => {
-                         console.error("File Write Error:", err);
-                         clearInterval(downloadInterval);
-                         mainWindow.webContents.send('download-cancelled');
-                     });
-                     
-                     // Resolve success now that download has started
-                     resolve({ success: true });
-                 });
-
-                 request.on('error', (err) => {
-                     console.error("HTTP Request Error:", err);
-                     resolve({ success: false, message: `Network Error: ${err.message}` });
-                 });
-             };
-             
-             downloadFile(fileUrl);
-        });
-    }
-
-    // --- WebTorrent Logic ---
-    if (!WebTorrent) return { success: false, message: 'Torrent client not initialized' };
-    
-    if (client) {
-        client.destroy();
-        if (downloadInterval) clearInterval(downloadInterval);
-    }
-    
-    try {
-        client = new WebTorrent();
-    } catch (e) {
-        console.error("Failed to create WebTorrent client:", e);
-        return { success: false, message: "Failed to initialize torrent engine: " + e.message };
-    }
-
-    try {
-        client.add(downloadSource, { path: finalPath }, (torrent) => {
-            downloadInterval = setInterval(() => {
-                if (!mainWindow) { clearInterval(downloadInterval); return; }
-                mainWindow.webContents.send('download-progress', {
-                    progress: torrent.progress,
-                    speed: torrent.downloadSpeed,
-                    downloaded: torrent.downloaded,
-                    total: torrent.length,
-                    peers: torrent.numPeers
-                });
-            }, 1000);
-
-            torrent.on('done', async () => {
-                clearInterval(downloadInterval);
-                console.log("Torrent Download finished.");
-                
-                // For torrents, torrent.name is usually a folder or file name
-                let gamePath = path.join(finalPath, torrent.name);
-                
-                // If it was the TBC internal torrent, we know we should skip extraction
-                // (or if original magnetURI was the key)
-                const isTBCTorrent = magnetURI === 'TORRENT:TBC';
-                await processGameDownload(gamePath, finalPath, mainWindow.webContents, { skipExtraction: isTBCTorrent });
-            });
-            
-            torrent.on('error', (err) => {
-                 console.error('Torrent error:', err);
-                 if (downloadInterval) clearInterval(downloadInterval);
-                 mainWindow.webContents.send('download-cancelled'); // Reset UI
-            });
-        });
-    } catch (err) {
-        console.error("Failed to add torrent:", err);
-        return { success: false, message: "Failed to start torrent: " + err.message };
-    }
-
-    return { success: true };
-    } catch (err) {
-        console.error("Unexpected error in start-download:", err);
-        return { success: false, message: `Unexpected error: ${err.message}` };
-    }
-});
-
-ipcMain.on('cancel-download', () => {
-    if (downloadInterval) {
-        clearInterval(downloadInterval);
-        downloadInterval = null;
-    }
-    if (client) {
-        client.destroy();
-        client = null;
-    }
-    if (mainWindow) {
-        mainWindow.webContents.send('download-cancelled');
-        // Reset progress bar on cancel
-        mainWindow.setProgressBar(-1);
     }
 });
 

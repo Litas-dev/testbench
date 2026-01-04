@@ -1,3 +1,7 @@
+/**
+ * Plays a notification sound using the Web Audio API
+ * Generates a sine wave that ramps up in frequency and down in volume
+ */
 export const playNotificationSound = () => {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();

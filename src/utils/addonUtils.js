@@ -4,14 +4,13 @@ export const fetchWarperiaAddons = async (ipcRenderer, activeGameId, activeGameV
     const wotlkLocal = localAddons.map(a => ({ ...a, gameVersion: '3.3.5' }));
     
     try {
-        // If WotLK, use local cache first for immediate display (simulated by returning local first if needed, 
-        // but here we just return the promise result or fallback)
+        // Prioritize remote data, falling back to local cache for WotLK if network request fails
         
         const addons = await ipcRenderer.invoke('fetch-warperia-addons', activeGameId);
         if (addons && addons.length > 0) {
             return addons;
         } else if (activeGameId === 'wotlk') {
-            // Fallback to local if fetch fails/empty for WotLK
+            // Use local fallback for WotLK if remote data is missing
             return wotlkLocal;
         } else {
             return [];
@@ -37,7 +36,7 @@ export const groupAddons = (list) => {
     const groups = {};
     const processed = new Set();
 
-    // Pass 1: Parent-Child (e.g. "Recount" -> "Recount_Modes")
+    // Strategy 1: Group by folder naming convention (Parent -> Child)
     items.forEach(item => {
         if (processed.has(item.folderName)) return;
 
@@ -54,7 +53,7 @@ export const groupAddons = (list) => {
         }
     });
 
-    // Pass 2: Shared Prefix (e.g. "DBM-Core", "DBM-PvP" -> group under "DBM-Core")
+    // Strategy 2: Group by common prefix clustering
     const remaining = items.filter(i => !processed.has(i.folderName));
     
     remaining.forEach(item => {
@@ -65,7 +64,7 @@ export const groupAddons = (list) => {
         
         for (const sep of separators) {
             const idx = item.folderName.indexOf(sep);
-            if (idx >= 3) { // Require at least 3 chars for prefix to avoid weak matches
+            if (idx >= 3) { // Minimum prefix length of 3 to prevent false positives
                 const candidate = item.folderName.substring(0, idx);
                 const cluster = remaining.filter(other => 
                      !processed.has(other.folderName) && 
@@ -85,7 +84,7 @@ export const groupAddons = (list) => {
                 (other.folderName.startsWith(prefix + '-') || other.folderName.startsWith(prefix + '_'))
             );
             
-            // Find best parent (prefer "Core", "Base", "Common", or just keep shortest)
+            // Identify best parent folder name using common convention keywords
             let parent = cluster[0];
             const priorityKeywords = ['core', 'base', 'common', 'main'];
             const bestCandidate = cluster.find(c => priorityKeywords.some(k => c.folderName.toLowerCase().includes(k)));
@@ -108,7 +107,7 @@ export const groupAddons = (list) => {
 
 export const processAddonsForDisplay = (groupedAddonsList) => {
     return groupedAddonsList.map(addon => {
-        // Manual overrides for common mismatches
+        // Normalize addon titles for consistent matching
         const overrides = {
             'DBM-Core': 'Deadly Boss Mods',
             'AtlasLoot': 'AtlasLoot Enhanced',
@@ -119,14 +118,14 @@ export const processAddonsForDisplay = (groupedAddonsList) => {
         let searchTitle = addon.title;
         if (overrides[addon.title]) searchTitle = overrides[addon.title];
 
-        // Try to find matching metadata in localAddons
+        // Enrich addon data with local metadata if available
         const meta = localAddons.find(a => 
             a.title.toLowerCase() === searchTitle.toLowerCase() || 
             (searchTitle.toLowerCase().includes(a.title.toLowerCase()) && a.title.length > 3) ||
             (a.title.toLowerCase().includes(searchTitle.toLowerCase()) && searchTitle.length > 3)
         );
         
-        // Use the Store Title if found (better display name), otherwise keep folder name
+        // Prefer store metadata title over folder name for display
         const displayTitle = meta ? meta.title : addon.title;
         
         return { ...addon, ...meta, title: displayTitle, originalFolderName: addon.folderName };
@@ -139,7 +138,7 @@ export const filterAddons = (source, addonSearch, addonSort) => {
         addon.description.toLowerCase().includes(addonSearch.toLowerCase())
     );
     
-    // Sorting Logic
+    /** Sort addons based on user selection */
     if (addonSort === 'a-z') {
         filtered.sort((a, b) => a.title.localeCompare(b.title));
     } else if (addonSort === 'z-a') {
@@ -152,7 +151,7 @@ export const filterAddons = (source, addonSearch, addonSort) => {
         };
         filtered.sort((a, b) => getDateVal(b.image) - getDateVal(a.image));
     }
-    // 'popular' keeps original order (default from JSON)
+    // Default sort ('popular') preserves original API order
     
     return filtered;
 };

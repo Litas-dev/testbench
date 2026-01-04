@@ -99,7 +99,7 @@ function App() {
     closeModal
   });
 
-  // Music Logic
+  // Effect: Handle background music playback and auto-play policies
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = 0.3;
@@ -128,7 +128,7 @@ function App() {
     }
   };
 
-  // App Info & Updates
+  // Effect: Fetch application version, updates, and verify integrity on mount
   useEffect(() => {
     const fetchAppInfo = async () => {
       const version = await ipcRenderer.invoke('get-app-version');
@@ -251,7 +251,7 @@ function App() {
     localStorage.setItem('warmane_saved_realmlists', JSON.stringify(newHistory));
   };
 
-  // Helper for Manage Clients Modal
+  // Handlers: Manage client visibility and default download path
   const toggleManageClients = () => setIsManageClientsOpen(!isManageClientsOpen);
 
   const handleBrowseDefaultPath = async () => {
@@ -403,7 +403,7 @@ function App() {
               installingAddon={addons.installingAddon}
               handleInstallAddon={() => { /* Manual install logic if needed */ }} 
               handleInstallWarperiaAddon={addons.handleInstallWarperiaAddon}
-              handleDeleteAddon={() => { /* Delete logic if needed */ }}
+              handleDeleteAddon={addons.handleDeleteAddon}
               selectedVersion={activeGame.version}
               gameInstalled={!!gameLibrary.gamePaths[gameLibrary.activeGameId]}
             />

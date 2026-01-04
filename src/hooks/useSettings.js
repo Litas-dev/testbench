@@ -46,7 +46,7 @@ export const useSettings = () => {
         }
     }, [currentTheme]);
 
-    // Update functions
+    // Handlers: Update state and persist to local storage
     const updateTheme = (themeId) => setCurrentTheme(themeId);
     
     const toggleAutoClose = () => {
