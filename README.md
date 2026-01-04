@@ -98,6 +98,14 @@ It is the first private server launcher to feature **Advanced Integrity Verifica
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## 💰 Support
+
+If you find this project helpful and want to support its development, you can donate via Dogecoin:
+
+**Doge:** `D8rQ9Rq2pnraaXf8PvhCPUMkYcNzsRnXLC`
+
+Thanks for your support!
+
 1.  Fork the Project
 2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
 3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
