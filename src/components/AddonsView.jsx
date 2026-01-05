@@ -157,8 +157,9 @@ const AddonsView = ({
                             value={addonSort}
                             onChange={(e) => setAddonSort(e.target.value)}
                         >
-                            <option value="popular">Popular</option>
-                            <option value="newest">Newest</option>
+                            <option value="popular">Popularity</option>
+                            <option value="newest">Recently Added</option>
+                            <option value="updated">Recently Updated</option>
                             <option value="a-z">Name (A-Z)</option>
                             <option value="z-a">Name (Z-A)</option>
                         </select>

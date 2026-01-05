@@ -780,6 +780,9 @@ function stripHtml(html) {
 }
 
 ipcMain.handle('fetch-warperia-addons', async (event, expansion) => {
+    // Deprecated: Warperia scraping is disabled in favor of local/GitHub mirror data.
+    return [];
+    /*
     try {
         const headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -831,9 +834,10 @@ ipcMain.handle('fetch-warperia-addons', async (event, expansion) => {
         console.error('Error fetching Warperia addons:', error);
         return [];
     }
+    */
 });
 
-ipcMain.handle('install-warperia-addon', async (event, { gamePath, detailUrl, expansion }) => {
+ipcMain.handle('install-warperia-addon', async (event, { gamePath, detailUrl, downloadUrl, expansion }) => {
     try {
         console.log(`[Install] Starting installation for ${detailUrl} (Exp: ${expansion})`);
         if (!gamePath) throw new Error('No game path provided');
@@ -843,52 +847,55 @@ ipcMain.handle('install-warperia-addon', async (event, { gamePath, detailUrl, ex
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         };
         
-        // 1. Fetch detail page with timeout
-        console.log(`[Install] Fetching detail page...`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-        
-        const response = await fetch(detailUrl, { headers, signal: controller.signal });
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) throw new Error(`Failed to fetch addon page: ${response.status} ${response.statusText}`);
-        
-        const html = await response.text();
-        
-        // 2. Find zip link
-        console.log(`[Install] Parsing zip link...`);
-        const zipRegex = /href="([^"]+\.zip)"/g;
-        let zipMatch;
-        let downloadUrl = null;
-        
-        while ((zipMatch = zipRegex.exec(html)) !== null) {
-            const url = zipMatch[1];
-            if (!downloadUrl) downloadUrl = url; 
+        let targetUrl = downloadUrl;
+
+        if (!targetUrl) {
+            // 1. Fetch detail page with timeout
+            console.log(`[Install] Fetching detail page (fallback)...`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
             
-            // Prioritize expansion-specific zip if possible
-            const lowerUrl = url.toLowerCase();
-            if (expansion === 'wotlk' && lowerUrl.includes('wotlk')) {
-                downloadUrl = url;
-                break; 
-            } else if (expansion === 'tbc' && (lowerUrl.includes('tbc') || lowerUrl.includes('2.4.3'))) {
-                downloadUrl = url;
-                break;
-            } else if (expansion === 'classic' && (lowerUrl.includes('vanilla') || lowerUrl.includes('1.12'))) {
-                downloadUrl = url;
-                break;
+            const response = await fetch(detailUrl, { headers, signal: controller.signal });
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) throw new Error(`Failed to fetch addon page: ${response.status} ${response.statusText}`);
+            
+            const html = await response.text();
+            
+            // 2. Find zip link
+            console.log(`[Install] Parsing zip link...`);
+            const zipRegex = /href="([^"]+\.zip)"/g;
+            let zipMatch;
+            
+            while ((zipMatch = zipRegex.exec(html)) !== null) {
+                const url = zipMatch[1];
+                if (!targetUrl) targetUrl = url; 
+                
+                // Prioritize expansion-specific zip if possible
+                const lowerUrl = url.toLowerCase();
+                if (expansion === 'wotlk' && lowerUrl.includes('wotlk')) {
+                    targetUrl = url;
+                    break; 
+                } else if (expansion === 'tbc' && (lowerUrl.includes('tbc') || lowerUrl.includes('2.4.3'))) {
+                    targetUrl = url;
+                    break;
+                } else if (expansion === 'classic' && (lowerUrl.includes('vanilla') || lowerUrl.includes('1.12'))) {
+                    targetUrl = url;
+                    break;
+                }
+            }
+            
+            if (!targetUrl) {
+                console.error(`[Install] No zip link found in HTML. HTML length: ${html.length}`);
+                throw new Error('No download link found for this addon');
             }
         }
         
-        if (!downloadUrl) {
-            console.error(`[Install] No zip link found in HTML. HTML length: ${html.length}`);
-            throw new Error('No download link found for this addon');
-        }
-        
-        console.log(`[Install] Found download URL: ${downloadUrl}`);
+        console.log(`[Install] Found download URL: ${targetUrl}`);
 
         // 3. Download zip
         const tempDir = app.getPath('temp');
-        const fileName = path.basename(downloadUrl);
+        const fileName = path.basename(targetUrl);
         const zipPath = path.join(tempDir, fileName);
         
         console.log(`[Install] Downloading to ${zipPath}...`);
@@ -896,7 +903,7 @@ ipcMain.handle('install-warperia-addon', async (event, { gamePath, detailUrl, ex
         const dlController = new AbortController();
         const dlTimeoutId = setTimeout(() => dlController.abort(), 60000); // 60s timeout for download
         
-        const zipResponse = await fetch(downloadUrl, { headers, signal: dlController.signal });
+        const zipResponse = await fetch(targetUrl, { headers, signal: dlController.signal });
         clearTimeout(dlTimeoutId);
         
         if (!zipResponse.ok) throw new Error(`Failed to download zip: ${zipResponse.statusText}`);

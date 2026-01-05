@@ -1,28 +1,40 @@
 import localAddons from '../assets/addons.json';
 
 export const fetchWarperiaAddons = async (ipcRenderer, activeGameId, activeGameVersion) => {
-    const wotlkLocal = localAddons.map(a => ({ ...a, gameVersion: '3.3.5' }));
+    // Determine the key used in the 'downloads' object for the current expansion
+    const expansionKey = activeGameId === 'wotlk' ? 'wotlk' : 
+                         activeGameId === 'tbc' ? 'tbc' : 
+                         activeGameId === 'vanilla' ? 'classic' : null;
+
+    if (!expansionKey) return [];
+
+    // Filter local addons that have a download link for the current expansion
+    // We prioritize the local database which is now the primary source
+    const localForExpansion = localAddons
+        .filter(a => a.downloads && a.downloads[expansionKey])
+        .map(a => ({
+            ...a,
+            // Override the generic downloadUrl with the expansion-specific one
+            downloadUrl: a.downloads[expansionKey],
+            // Ensure gameVersion matches the active expansion
+            gameVersion: activeGameId === 'wotlk' ? '3.3.5' : 
+                         activeGameId === 'tbc' ? '2.4.3' : '1.12.1'
+        }));
+
+    return localForExpansion;
     
+    /* 
+    // Deprecated: Remote fetching is disabled in favor of the local/GitHub mirror
     try {
-        // Prioritize remote data, falling back to local cache for WotLK if network request fails
-        
         const addons = await ipcRenderer.invoke('fetch-warperia-addons', activeGameId);
         if (addons && addons.length > 0) {
             return addons;
-        } else if (activeGameId === 'wotlk') {
-            // Use local fallback for WotLK if remote data is missing
-            return wotlkLocal;
-        } else {
-            return [];
         }
     } catch (error) {
         console.error("Error fetching Warperia addons:", error);
-        if (activeGameId === 'wotlk') {
-            return wotlkLocal;
-        } else {
-            return [];
-        }
     }
+    return []; 
+    */
 };
 
 export const groupAddons = (list) => {

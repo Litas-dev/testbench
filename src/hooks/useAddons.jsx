@@ -58,8 +58,27 @@ export const useAddons = ({
 
             const fetchWarperia = async () => {
                 setLoadingAddons(true);
-                const wotlkLocal = localAddons.map(a => ({ ...a, gameVersion: '3.3.5' }));
                 
+                // Filter local addons based on the active expansion
+                const expansionKey = activeGameId === 'wotlk' ? 'wotlk' : 
+                                     activeGameId === 'tbc' ? 'tbc' : 
+                                     activeGameId === 'vanilla' ? 'classic' : null;
+
+                const localForExpansion = localAddons
+                    .filter(a => a.downloads && a.downloads[expansionKey])
+                    .map(a => ({
+                        ...a,
+                        downloadUrl: a.downloads[expansionKey], // Override with expansion specific link
+                        gameVersion: activeGameId === 'wotlk' ? '3.3.5' : 
+                                     activeGameId === 'tbc' ? '2.4.3' : '1.12.1'
+                    }));
+
+                // Use local data as primary source now (since we have full database)
+                setAllWarperiaAddons(localForExpansion);
+                setLoadingAddons(false);
+                
+                // We disable the remote fetch for now as we are transitioning to local/GitHub mirror
+                /*
                 try {
                     // Optimistic update: Show local cache while fetching remote data
                     if (activeGameId === 'wotlk' && allWarperiaAddons.length === 0) {
@@ -84,6 +103,7 @@ export const useAddons = ({
                 } finally {
                     setLoadingAddons(false);
                 }
+                */
             };
             
             fetchWarperia();
@@ -107,14 +127,20 @@ export const useAddons = ({
             } else if (addonSort === 'z-a') {
                 filtered.sort((a, b) => b.title.localeCompare(a.title));
             } else if (addonSort === 'newest') {
-                const getDateVal = (url) => {
-                    if (!url) return 0;
-                    const match = url.match(/\/(\d{4})\/(\d{2})\//);
-                    return match ? parseInt(match[1]) * 100 + parseInt(match[2]) : 0;
-                };
-                filtered.sort((a, b) => getDateVal(b.image) - getDateVal(a.image));
+                filtered.sort((a, b) => {
+                    const dateA = a.uploadDate ? new Date(a.uploadDate).getTime() : 0;
+                    const dateB = b.uploadDate ? new Date(b.uploadDate).getTime() : 0;
+                    return dateB - dateA;
+                });
+            } else if (addonSort === 'updated') {
+                filtered.sort((a, b) => {
+                    const dateA = a.lastUpdate ? new Date(a.lastUpdate).getTime() : 0;
+                    const dateB = b.lastUpdate ? new Date(b.lastUpdate).getTime() : 0;
+                    return dateB - dateA;
+                });
+            } else if (addonSort === 'popular') {
+                filtered.sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0));
             }
-            // 'popular' keeps original order
             
             setFilteredAddonCount(filtered.length);
             
@@ -139,6 +165,7 @@ export const useAddons = ({
             const promise = ipcRenderer.invoke('install-warperia-addon', { 
                 gamePath: path, 
                 detailUrl: addon.detailUrl,
+                downloadUrl: addon.downloadUrl,
                 expansion: activeGameId
             });
             
