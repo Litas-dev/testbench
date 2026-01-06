@@ -116,7 +116,3 @@ Thanks for your support!
 ## ⚠️ Disclaimer
 
 This project is an unofficial fan creation and is not affiliated with, endorsed, sponsored, or specifically approved by any official game studio. All trademarks are property of their respective owners.
-
-## 📄 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
