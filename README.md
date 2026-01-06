@@ -37,7 +37,7 @@ It is the first private server launcher to feature **Advanced Integrity Verifica
 *   **Active Threat Monitoring**: Immediate visual alerts on the sidebar if any integrity mismatch is detected.
 
 ### 🧩 Next-Gen Addon Manager
-*   **Universal Browser**: Browse and install addons directly from the Warperia database.
+*   **Universal Browser**: Browse and install addons.
 *   **One-Click Install**: No more unzipping or manual folder management. Just click "Install".
 *   **Smart Grouping**: Automatically groups multi-module addons into single, clean entries.
 *   **Local Management**: Easily update or delete your existing addons.
