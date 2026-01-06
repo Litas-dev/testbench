@@ -16,7 +16,7 @@
 
 ## 📖 About
 
-The **Azeroth Legacy Launcher** is a powerful, open-source universal launcher designed to modernize your experience across multiple expansions. Whether you play on **1.12.1**, **2.4.3 / 2.5.2**, or **3.3.5a**, this launcher provides unparalleled security, automated game management, and a seamless addon ecosystem.
+The **Azeroth Legacy Launcher** is a powerful, open-source universal launcher designed to modernize your experience across multiple expansions. Whether you play on **1.12.1**, **2.4.3**, or **3.3.5a**, this launcher provides unparalleled security, automated game management, and a seamless addon ecosystem.
 
 It is the first private server launcher to feature **Advanced Integrity Verification**, ensuring that your client code is authentic, safe, and unmodified.
 
