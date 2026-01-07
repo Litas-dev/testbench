@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import ipcRenderer from '../utils/ipc';
 import { games } from '../config/games';
 import { playNotificationSound } from '../utils/audio';

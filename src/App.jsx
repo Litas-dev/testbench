@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { 
   Minus, Square, X, Play, Settings as SettingsIcon, Download, Users, Globe, 
   ChevronRight, XCircle, FolderSearch, RefreshCw, Puzzle, Trash2, Plus, 
