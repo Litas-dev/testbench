@@ -300,8 +300,7 @@
 
         // Fetch latest release from GitHub
         document.addEventListener('DOMContentLoaded', function() {
-            const repo = 'Litas-dev/Relictum-Launcher';
-            const apiUrl = `https://api.github.com/repos/${repo}/releases/latest`;
+            const apiUrl = 'https://api.github.com/repos/Litas-dev/Relictum-Launcher/releases/latest';
 
             fetch(apiUrl)
                 .then(response => response.json())

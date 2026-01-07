@@ -451,7 +451,7 @@ ipcMain.handle('update-realmlist', async (event, { gamePath, content }) => {
 // --- Update Check ---
 ipcMain.on('download-update', async (event) => {
     try {
-        const repoApi = 'https://api.github.com/repos/Litas-dev/testbench/releases/latest';
+        const repoApi = 'https://api.github.com/repos/Litas-dev/Relictum-Launcher/releases/latest';
         const response = await fetch(repoApi, {
             headers: { 'User-Agent': 'Warmane-Launcher' }
         });
@@ -596,7 +596,7 @@ ipcMain.handle('get-app-version', () => {
 ipcMain.handle('check-for-updates', async () => {
     try {
         const currentVersion = app.getVersion();
-        const response = await fetch('https://api.github.com/repos/Litas-dev/testbench/releases/latest', {
+        const response = await fetch('https://api.github.com/repos/Litas-dev/Relictum-Launcher/releases/latest', {
             headers: { 'User-Agent': 'Warmane-Launcher' }
         });
         
