@@ -41,8 +41,8 @@ const Settings = ({
     { code: 'en', label: 'settings.english', disabled: false },
     { code: 'es', label: 'settings.spanish', disabled: false },
     { code: 'ru', label: 'settings.russian', disabled: false },
-    { code: 'pt', label: 'settings.portuguese', disabled: true },
-    { code: 'de', label: 'settings.german', disabled: true },
+    { code: 'pt', label: 'settings.portuguese', disabled: false },
+    { code: 'de', label: 'settings.german', disabled: false },
   ];
 
   return (

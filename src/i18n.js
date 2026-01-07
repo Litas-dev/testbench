@@ -4,6 +4,8 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import en from './locales/en.json';
 import es from './locales/es.json';
 import ru from './locales/ru.json';
+import pt from './locales/pt.json';
+import de from './locales/de.json';
 
 i18n
   // detect user language
@@ -28,6 +30,12 @@ i18n
       },
       ru: {
         translation: ru
+      },
+      pt: {
+        translation: pt
+      },
+      de: {
+        translation: de
       }
     }
   });
