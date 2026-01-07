@@ -15,6 +15,7 @@ import Dashboard from './components/views/Dashboard';
 import GameDetails from './components/views/GameDetails';
 import Settings from './components/views/Settings';
 import About from './components/views/About';
+import UpdateNotification from './components/UpdateNotification';
 
 // Config & Utils
 import { games } from './config/games';
@@ -523,6 +524,9 @@ function App() {
            />
         </div>
       </Modal>
+
+      {/* Updater Notification */}
+      <UpdateNotification />
 
     </div>
   );

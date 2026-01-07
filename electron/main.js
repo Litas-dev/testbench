@@ -17,6 +17,7 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 let mainWindow = null;
 let downloadInterval = null;
+let downloadedInstallerPath = null;
 
 // --- Configuration ---
 const SECURITY_CHECK_ENABLED = true;
@@ -448,11 +449,137 @@ ipcMain.handle('update-realmlist', async (event, { gamePath, content }) => {
 });
 
 // --- Update Check ---
-ipcMain.on('download-update', async (event, url) => {
+ipcMain.on('download-update', async (event) => {
     try {
-        await shell.openExternal(url);
+        const repoApi = 'https://api.github.com/repos/Litas-dev/testbench/releases/latest';
+        const response = await fetch(repoApi, {
+            headers: { 'User-Agent': 'Warmane-Launcher' }
+        });
+        if (!response.ok) throw new Error('Failed to fetch releases');
+        const data = await response.json();
+
+        const assets = Array.isArray(data.assets) ? data.assets : [];
+        let installerAsset = null;
+        for (const a of assets) {
+            const name = (a.name || '').toLowerCase();
+            if (name.endsWith('.exe')) {
+                if (!installerAsset) installerAsset = a;
+                if (name.includes('setup') || name.includes('installer')) {
+                    installerAsset = a;
+                    break;
+                }
+            }
+        }
+
+        if (!installerAsset) {
+            if (mainWindow) {
+                mainWindow.webContents.send('updater-message', {
+                    type: 'error',
+                    text: 'No Windows installer asset found in latest release.',
+                    data: null
+                });
+            }
+            return;
+        }
+
+        const downloadUrl = installerAsset.browser_download_url;
+        const tempDir = app.getPath('temp');
+        const fileName = installerAsset.name || 'WarmaneLauncherSetup.exe';
+        const outPath = path.join(tempDir, fileName);
+
+        if (mainWindow) {
+            mainWindow.webContents.send('updater-message', {
+                type: 'progress',
+                text: 'Starting download...',
+                data: { percent: 0 }
+            });
+        }
+
+        // Use fetch to handle redirects automatically (GitHub releases redirect to S3)
+        const assetResponse = await fetch(downloadUrl);
+        if (!assetResponse.ok) throw new Error(`Download failed: ${assetResponse.status} ${assetResponse.statusText}`);
+
+        const totalBytes = Number(assetResponse.headers.get('content-length') || 0);
+        const fileStream = fs.createWriteStream(outPath);
+        
+        // Read the body stream (Web Streams API)
+        const reader = assetResponse.body.getReader();
+        let downloaded = 0;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            fileStream.write(Buffer.from(value));
+            downloaded += value.length;
+            
+            if (mainWindow) {
+                const percent = totalBytes > 0 ? Math.min(100, Math.round((downloaded / totalBytes) * 100)) : 0;
+                mainWindow.webContents.send('updater-message', {
+                    type: 'progress',
+                    text: 'Downloading update...',
+                    data: { percent }
+                });
+            }
+        }
+        
+        await new Promise((resolve, reject) => {
+            fileStream.on('finish', resolve);
+            fileStream.on('error', reject);
+            fileStream.end();
+        });
+        
+        downloadedInstallerPath = outPath;
+        if (mainWindow) {
+            mainWindow.webContents.send('updater-message', {
+                type: 'downloaded',
+                text: 'Update downloaded. Ready to install.',
+                data: { path: outPath }
+            });
+        }
     } catch (e) {
-        console.error('Failed to open update url:', e);
+        console.error('Failed to download update:', e);
+        if (mainWindow) {
+            mainWindow.webContents.send('updater-message', {
+                type: 'error',
+                text: `Download Error: ${e.message} (${e.code || 'NO_CODE'})`,
+                data: null
+            });
+        }
+    }
+});
+
+ipcMain.on('install-update', async () => {
+    try {
+        if (!downloadedInstallerPath || !fs.existsSync(downloadedInstallerPath)) {
+            if (mainWindow) {
+                mainWindow.webContents.send('updater-message', {
+                    type: 'error',
+                    text: 'Installer not found. Please download again.',
+                    data: null
+                });
+            }
+            return;
+        }
+
+        const result = await shell.openPath(downloadedInstallerPath);
+        if (result) {
+            throw new Error(`Failed to open installer: ${result}`);
+        }
+        
+        // Give the installer a moment to start before quitting
+        setTimeout(() => {
+            app.quit();
+        }, 1000);
+    } catch (e) {
+        console.error('Failed to start installer:', e);
+        if (mainWindow) {
+            mainWindow.webContents.send('updater-message', {
+                type: 'error',
+                text: e.message || 'Installer failed to start',
+                data: null
+            });
+        }
     }
 });
 
@@ -469,7 +596,7 @@ ipcMain.handle('get-app-version', () => {
 ipcMain.handle('check-for-updates', async () => {
     try {
         const currentVersion = app.getVersion();
-        const response = await fetch('https://api.github.com/repos/Litas-dev/Azeroth-Legacy-Launcher/releases/latest', {
+        const response = await fetch('https://api.github.com/repos/Litas-dev/testbench/releases/latest', {
             headers: { 'User-Agent': 'Warmane-Launcher' }
         });
         
@@ -490,7 +617,18 @@ ipcMain.handle('check-for-updates', async () => {
         };
 
         const updateAvailable = isNewer(latestVersion, currentVersion);
-        
+
+        if (mainWindow) {
+            mainWindow.webContents.send('updater-message', {
+                type: updateAvailable ? 'available' : 'not-available',
+                text: updateAvailable ? `New version ${latestVersion} available!` : 'No updates found',
+                data: {
+                    version: latestVersion,
+                    url: data.html_url
+                }
+            });
+        }
+
         return {
             updateAvailable,
             latestVersion,
